@@ -1,0 +1,64 @@
+# ============================================================
+# Backend (Laravel)
+# ============================================================
+backend/.env
+backend/.env.backup
+backend/.phpunit.result.cache
+backend/bootstrap/cache/*.php
+backend/public/hot
+backend/public/storage
+backend/storage/*.key
+backend/vendor/
+backend/node_modules/
+backend/.sail
+
+# ============================================================
+# Frontend (Vue)
+# ============================================================
+frontend/.env
+frontend/.env.local
+frontend/.env.*.local
+frontend/node_modules/
+frontend/dist/
+frontend/dist-ssr/
+frontend/.cache/
+frontend/coverage/
+
+# ============================================================
+# AST Service (Node.js)
+# ============================================================
+ast-service/.env
+ast-service/node_modules/
+ast-service/dist/
+ast-service/coverage/
+
+# ============================================================
+# Docker volumes and data
+# ============================================================
+.docker-volumes/
+
+# ============================================================
+# IDE / OS
+# ============================================================
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# ============================================================
+# Logs
+# ============================================================
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ============================================================
+# Misc
+# ============================================================
+*.pem
+*.key
+*.p12
+PRD.md
