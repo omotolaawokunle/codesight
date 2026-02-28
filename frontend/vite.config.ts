@@ -19,4 +19,22 @@ export default defineConfig({
   server: {
     port: 5173,
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          // Core Vue runtime and router kept separate from app code
+          'vendor-vue': ['vue', 'vue-router', 'pinia'],
+          // Axios is standalone so it can be cached independently
+          'vendor-http': ['axios'],
+          // Syntax highlighting is the heaviest dependency — lazy loaded
+          'vendor-highlight': ['highlight.js'],
+          // Markdown renderer
+          'vendor-markdown': ['marked', 'dompurify'],
+          // Headless UI and Heroicons
+          'vendor-ui': ['@headlessui/vue', '@heroicons/vue'],
+        },
+      },
+    },
+  },
 })

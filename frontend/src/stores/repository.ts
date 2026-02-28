@@ -2,12 +2,14 @@ import api from '@/services/api'
 import type { CreateRepositoryPayload, Repository, RepositoryStatus } from '@/types'
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
+import { useUiStore } from '@/stores/ui'
 
 export const useRepositoryStore = defineStore('repository', () => {
   const repositories = ref<Repository[]>([])
   const currentRepository = ref<Repository | null>(null)
   const isLoading = ref(false)
   const error = ref<string | null>(null)
+  const ui = useUiStore()
 
   // ----- Fetch all repositories -----------------------------------------------
 
@@ -51,9 +53,11 @@ export const useRepositoryStore = defineStore('repository', () => {
       const { data } = await api.post('/repositories', payload)
       const created: Repository = data.data ?? data
       repositories.value.unshift(created)
+      ui.addToast(`"${created.name}" added and queued for indexing.`, 'success')
       return created
     } catch (err: unknown) {
       error.value = 'Failed to create repository.'
+      ui.addToast('Failed to create repository.', 'error')
       throw err
     } finally {
       isLoading.value = false
@@ -63,18 +67,30 @@ export const useRepositoryStore = defineStore('repository', () => {
   // ----- Delete repository -----------------------------------------------------
 
   async function deleteRepository(id: number) {
-    await api.delete(`/repositories/${id}`)
-    repositories.value = repositories.value.filter((r) => r.id !== id)
-    if (currentRepository.value?.id === id) {
-      currentRepository.value = null
+    try {
+      await api.delete(`/repositories/${id}`)
+      repositories.value = repositories.value.filter((r) => r.id !== id)
+      if (currentRepository.value?.id === id) {
+        currentRepository.value = null
+      }
+      ui.addToast('Repository deleted.', 'success')
+    } catch (err: unknown) {
+      ui.addToast('Failed to delete repository.', 'error')
+      throw err
     }
   }
 
   // ----- Re-index repository ---------------------------------------------------
 
   async function reindexRepository(id: number) {
-    await api.post(`/repositories/${id}/reindex`)
-    updateRepositoryInList(id, { indexing_status: 'pending', indexed_files: 0, total_chunks: 0 })
+    try {
+      await api.post(`/repositories/${id}/reindex`)
+      updateRepositoryInList(id, { indexing_status: 'pending', indexed_files: 0, total_chunks: 0 })
+      ui.addToast('Re-indexing queued.', 'success')
+    } catch (err: unknown) {
+      ui.addToast('Failed to start re-indexing.', 'error')
+      throw err
+    }
   }
 
   // ----- Poll indexing status --------------------------------------------------
