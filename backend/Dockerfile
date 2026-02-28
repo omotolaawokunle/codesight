@@ -9,18 +9,22 @@ RUN composer install \
     --no-interaction \
     --no-scripts \
     --prefer-dist \
-    --optimize-autoloader
+    --optimize-autoloader \
+    --ignore-platform-reqs
 
 # ── Stage 2: Production image ────────────────────────────────────────────────
 FROM php:8.3-fpm-alpine AS production
 
-# Install system dependencies and PHP extensions
+# Install system dependencies, build tools, and PHP extensions
 RUN apk add --no-cache \
     git \
     curl \
     libpq-dev \
     libzip-dev \
     oniguruma-dev \
+    autoconf \
+    g++ \
+    make \
     && docker-php-ext-install \
         pdo \
         pdo_pgsql \
@@ -28,10 +32,10 @@ RUN apk add --no-cache \
         zip \
         bcmath \
         mbstring \
-        opcache
-
-# Install Redis extension
-RUN pecl install redis && docker-php-ext-enable redis
+        opcache \
+    && pecl install redis \
+    && docker-php-ext-enable redis \
+    && apk del autoconf g++ make
 
 # Configure OPcache for production
 RUN echo "opcache.enable=1" >> /usr/local/etc/php/conf.d/opcache.ini \
@@ -47,15 +51,14 @@ COPY --from=deps /app/vendor ./vendor
 # Copy application code
 COPY . .
 
-# Generate optimised autoloader and cache configuration
-RUN php artisan config:cache \
-    && php artisan route:cache \
-    && php artisan view:cache \
-    || true
-
 # Set correct permissions
 RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
 
+# Copy and set up entrypoint — caches config at runtime so env vars are picked up
+COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+
 EXPOSE 9000
 
+ENTRYPOINT ["docker-entrypoint.sh"]
 CMD ["php-fpm"]
