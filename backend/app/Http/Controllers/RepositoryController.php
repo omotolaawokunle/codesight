@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreRepositoryRequest;
 use App\Http\Resources\RepositoryResource;
-use App\Jobs\IndexRepositoryJob;
+use App\Jobs\CloneRepositoryJob;
 use App\Models\Repository;
 use App\Services\VectorDBService;
 use Illuminate\Http\JsonResponse;
@@ -67,7 +67,7 @@ class RepositoryController extends Controller
             'indexing_status' => 'pending',
         ]);
 
-        IndexRepositoryJob::dispatch($repository);
+        CloneRepositoryJob::dispatch($repository);
 
         Cache::forget("repositories:user:{$request->user()->id}");
 
@@ -168,7 +168,7 @@ class RepositoryController extends Controller
             'total_chunks'          => 0,
         ]);
 
-        IndexRepositoryJob::dispatch($repository);
+        CloneRepositoryJob::dispatch($repository);
 
         Cache::forget("repositories:user:{$request->user()->id}");
 
