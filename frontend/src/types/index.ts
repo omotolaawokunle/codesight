@@ -10,6 +10,7 @@ export interface Repository {
   indexed_files: number | null
   total_chunks: number | null
   last_indexed_commit: string | null
+  indexing_error: string | null
   created_at: string
   updated_at: string
 }

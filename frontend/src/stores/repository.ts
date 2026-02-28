@@ -1,7 +1,7 @@
+import api from '@/services/api'
+import type { CreateRepositoryPayload, Repository, RepositoryStatus } from '@/types'
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import type { Repository, CreateRepositoryPayload } from '@/types'
-import api from '@/services/api'
 
 export const useRepositoryStore = defineStore('repository', () => {
   const repositories = ref<Repository[]>([])
@@ -9,48 +9,58 @@ export const useRepositoryStore = defineStore('repository', () => {
   const isLoading = ref(false)
   const error = ref<string | null>(null)
 
+  // ----- Fetch all repositories -----------------------------------------------
+
   async function fetchRepositories() {
     isLoading.value = true
     error.value = null
     try {
       const { data } = await api.get('/repositories')
-      repositories.value = data.data
+      // Handle both paginated (data.data) and plain array responses.
+      repositories.value = data.data ?? data
     } catch (err: unknown) {
-      error.value = 'Failed to load repositories'
+      error.value = 'Failed to load repositories.'
       throw err
     } finally {
       isLoading.value = false
     }
   }
+
+  // ----- Fetch single repository -----------------------------------------------
 
   async function fetchRepository(id: number) {
     isLoading.value = true
     error.value = null
     try {
       const { data } = await api.get(`/repositories/${id}`)
-      currentRepository.value = data
+      currentRepository.value = data.data ?? data
     } catch (err: unknown) {
-      error.value = 'Failed to load repository'
+      error.value = 'Failed to load repository.'
       throw err
     } finally {
       isLoading.value = false
     }
   }
 
+  // ----- Create repository -----------------------------------------------------
+
   async function createRepository(payload: CreateRepositoryPayload) {
     isLoading.value = true
     error.value = null
     try {
       const { data } = await api.post('/repositories', payload)
-      repositories.value.unshift(data)
-      return data as Repository
+      const created: Repository = data.data ?? data
+      repositories.value.unshift(created)
+      return created
     } catch (err: unknown) {
-      error.value = 'Failed to create repository'
+      error.value = 'Failed to create repository.'
       throw err
     } finally {
       isLoading.value = false
     }
   }
+
+  // ----- Delete repository -----------------------------------------------------
 
   async function deleteRepository(id: number) {
     await api.delete(`/repositories/${id}`)
@@ -60,10 +70,52 @@ export const useRepositoryStore = defineStore('repository', () => {
     }
   }
 
+  // ----- Re-index repository ---------------------------------------------------
+
   async function reindexRepository(id: number) {
     await api.post(`/repositories/${id}/reindex`)
+    updateRepositoryInList(id, { indexing_status: 'pending', indexed_files: 0, total_chunks: 0 })
+  }
+
+  // ----- Poll indexing status --------------------------------------------------
+
+  /**
+   * Fetches the current indexing status for a repository and merges the
+   * progress fields back into the in-memory repository list.
+   *
+   * Called repeatedly by usePolling while a repository is in_progress.
+   */
+  async function fetchStatus(id: number): Promise<RepositoryStatus> {
+    const { data } = await api.get<RepositoryStatus>(`/repositories/${id}/status`)
+    const status = data
+
+    updateRepositoryInList(id, {
+      indexing_status: status.status,
+      indexed_files: status.indexed_files,
+      total_files: status.total_files,
+      total_chunks: status.total_chunks,
+      indexing_started_at: status.started_at ?? undefined,
+      indexing_completed_at: status.completed_at ?? undefined,
+    } as Partial<Repository>)
+
+    // Also update currentRepository if it's the one being viewed.
+    if (currentRepository.value?.id === id) {
+      Object.assign(currentRepository.value, {
+        indexing_status: status.status,
+        indexed_files: status.indexed_files,
+        total_files: status.total_files,
+        total_chunks: status.total_chunks,
+      })
+    }
+
+    return status
+  }
+
+  // ----- Internal helper -------------------------------------------------------
+
+  function updateRepositoryInList(id: number, patch: Partial<Repository>) {
     const repo = repositories.value.find((r) => r.id === id)
-    if (repo) repo.indexing_status = 'pending'
+    if (repo) Object.assign(repo, patch)
   }
 
   return {
@@ -76,5 +128,6 @@ export const useRepositoryStore = defineStore('repository', () => {
     createRepository,
     deleteRepository,
     reindexRepository,
+    fetchStatus,
   }
 })

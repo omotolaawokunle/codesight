@@ -61,4 +61,4 @@ yarn-error.log*
 *.pem
 *.key
 *.p12
-PRD.md
+docs/*
