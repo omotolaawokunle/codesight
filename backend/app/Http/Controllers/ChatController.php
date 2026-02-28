@@ -10,6 +10,7 @@ use App\Models\Repository;
 use App\Services\LLMService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Log;
 use Laravel\Ai\Responses\StreamedAgentResponse;
@@ -181,6 +182,7 @@ class ChatController extends Controller
 
     /**
      * List conversations for a repository belonging to the authenticated user.
+     * Results are cached per user+repository for 2 minutes.
      *
      * GET /api/chat/{repositoryId}/conversations
      */
@@ -189,18 +191,23 @@ class ChatController extends Controller
         $repository = Repository::findOrFail($repositoryId);
         Gate::authorize('view', $repository);
 
-        $conversations = Conversation::where('user_id', $request->user()->id)
-            ->where('repository_id', $repositoryId)
-            ->withCount('messages')
-            ->latest()
-            ->get()
-            ->map(fn (Conversation $c) => [
-                'id'             => $c->id,
-                'title'          => $c->title,
-                'messages_count' => $c->messages_count,
-                'created_at'     => $c->created_at,
-                'updated_at'     => $c->updated_at,
-            ]);
+        $userId = $request->user()->id;
+        $cacheKey = "conversations:user:{$userId}:repo:{$repositoryId}";
+
+        $conversations = Cache::remember($cacheKey, 120, function () use ($userId, $repositoryId) {
+            return Conversation::where('user_id', $userId)
+                ->where('repository_id', $repositoryId)
+                ->withCount('messages')
+                ->latest()
+                ->get()
+                ->map(fn (Conversation $c) => [
+                    'id'             => $c->id,
+                    'title'          => $c->title,
+                    'messages_count' => $c->messages_count,
+                    'created_at'     => $c->created_at,
+                    'updated_at'     => $c->updated_at,
+                ]);
+        });
 
         return response()->json(['data' => $conversations]);
     }
@@ -218,7 +225,12 @@ class ChatController extends Controller
             return response()->json(['message' => 'Forbidden.'], 403);
         }
 
+        $userId = $conversation->user_id;
+        $repositoryId = $conversation->repository_id;
+
         $conversation->delete();
+
+        Cache::forget("conversations:user:{$userId}:repo:{$repositoryId}");
 
         return response()->json(['message' => 'Conversation deleted.']);
     }
@@ -228,21 +240,27 @@ class ChatController extends Controller
      */
     private function findOrCreateConversation(Repository $repository, ?int $conversationId, string $query): Conversation
     {
+        $userId = request()->user()->id;
+
         if ($conversationId !== null) {
             $conversation = Conversation::find($conversationId);
 
-            if ($conversation && $conversation->user_id === request()->user()->id) {
+            if ($conversation && $conversation->user_id === $userId) {
                 return $conversation;
             }
         }
 
         $title = $this->llmService->generateTitle($query);
 
-        return Conversation::create([
-            'user_id'       => request()->user()->id,
+        $conversation = Conversation::create([
+            'user_id'       => $userId,
             'repository_id' => $repository->id,
             'title'         => $title,
         ]);
+
+        Cache::forget("conversations:user:{$userId}:repo:{$repository->id}");
+
+        return $conversation;
     }
 
     /**

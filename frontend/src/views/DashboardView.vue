@@ -125,30 +125,13 @@
       </div>
     </section>
 
-    <!-- Toast -->
-    <Transition
-      enter-active-class="transition duration-200 ease-out"
-      enter-from-class="translate-y-2 opacity-0"
-      enter-to-class="translate-y-0 opacity-100"
-      leave-active-class="transition duration-150 ease-in"
-      leave-from-class="translate-y-0 opacity-100"
-      leave-to-class="translate-y-2 opacity-0"
-    >
-      <div
-        v-if="toast.visible"
-        class="fixed bottom-6 right-6 z-50 flex items-center gap-3 rounded-xl px-4 py-3 shadow-xl text-sm font-medium"
-        :class="toast.type === 'error' ? 'bg-red-600 text-white' : 'bg-slate-800 border border-slate-700 text-slate-100'"
-      >
-        {{ toast.message }}
-      </div>
-    </Transition>
-
     <RepositoryForm v-model="showForm" @created="onCreated" />
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, watch } from 'vue'
+import { ref } from 'vue'
 import { useRepositoryStore } from '@/stores/repository'
 import { useAuthStore } from '@/stores/auth'
 import type { Repository } from '@/types'
@@ -207,17 +190,6 @@ const stats = computed(() => [
   },
 ])
 
-// ----- Toast ----------------------------------------------------------------
-
-const toast = ref({ visible: false, message: '', type: 'success' as 'success' | 'error' })
-let toastTimer: ReturnType<typeof setTimeout>
-
-function showToast(message: string, type: 'success' | 'error' = 'success') {
-  clearTimeout(toastTimer)
-  toast.value = { visible: true, message, type }
-  toastTimer = setTimeout(() => { toast.value.visible = false }, 3500)
-}
-
 // ----- Polling --------------------------------------------------------------
 
 const { start: startPolling, stop: stopPolling } = usePolling(async () => {
@@ -249,26 +221,15 @@ async function load() {
 }
 
 async function handleDelete(id: number) {
-  try {
-    await store.deleteRepository(id)
-    showToast('Repository deleted.')
-  } catch {
-    showToast('Failed to delete repository.', 'error')
-  }
+  await store.deleteRepository(id)
 }
 
 async function handleReindex(id: number) {
-  try {
-    await store.reindexRepository(id)
-    showToast('Re-indexing queued.')
-    startPolling()
-  } catch {
-    showToast('Failed to start re-indexing.', 'error')
-  }
+  await store.reindexRepository(id)
+  startPolling()
 }
 
-function onCreated(repository: Repository) {
-  showToast(`"${repository.name}" added and queued for indexing.`)
+function onCreated(_repository: Repository) {
   startPolling()
 }
 

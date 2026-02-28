@@ -3,6 +3,7 @@ import { ref } from 'vue'
 import type { Conversation, Message, CodeSource } from '@/types'
 import api from '@/services/api'
 import { useStreaming } from '@/composables/useStreaming'
+import { useUiStore } from '@/stores/ui'
 
 export const useChatStore = defineStore('chat', () => {
   const conversations = ref<Conversation[]>([])
@@ -13,6 +14,7 @@ export const useChatStore = defineStore('chat', () => {
   const error = ref<string | null>(null)
 
   const { stream } = useStreaming()
+  const ui = useUiStore()
 
   async function fetchConversations(repositoryId: number) {
     isLoading.value = true
@@ -124,6 +126,7 @@ export const useChatStore = defineStore('chat', () => {
       }
     } catch (err: unknown) {
       error.value = 'Failed to stream response'
+      ui.addToast('Failed to get a response. Please try again.', 'error')
       // Remove the incomplete assistant message on error
       messages.value = messages.value.filter((m) => m.id !== tempAssistantMsg.id)
       throw err
@@ -142,8 +145,10 @@ export const useChatStore = defineStore('chat', () => {
         currentConversation.value = null
         messages.value = []
       }
+      ui.addToast('Conversation deleted.', 'success')
     } catch (err: unknown) {
       error.value = 'Failed to delete conversation'
+      ui.addToast('Failed to delete conversation.', 'error')
       throw err
     }
   }

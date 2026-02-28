@@ -213,8 +213,108 @@ The AST service must be running for indexing to work. Start it with `cd ast-serv
 **`Tests failing with database errors`**
 Backend tests use SQLite in-memory. Ensure `backend/.env.testing` exists (created during setup). Run `php artisan config:clear` if you see stale config issues.
 
+## Production Deployment
+
+Codesight ships with a production-ready Docker Compose setup (`docker-compose.prod.yml`) that runs all services behind an Nginx reverse proxy.
+
+### Pre-requisites
+
+- Docker 24+ and Docker Compose v2
+- A Linux server with at least 4 GB RAM
+- An Anthropic API key and a Gemini (or OpenAI) API key
+- A domain name pointed at your server (for HTTPS)
+
+### Steps
+
+**1. Clone the repository on your server:**
+
+```bash
+git clone https://github.com/your-org/codesight.git
+cd codesight
+```
+
+**2. Configure environment variables:**
+
+```bash
+cp backend/.env.example backend/.env
+# Edit backend/.env — at minimum set:
+#   APP_KEY (run: docker compose -f docker-compose.prod.yml run --rm backend php artisan key:generate --show)
+#   APP_ENV=production
+#   APP_DEBUG=false
+#   DB_PASSWORD=<strong-password>
+#   FRONTEND_URL=https://your-domain.com
+#   ANTHROPIC_API_KEY=sk-ant-...
+#   GOOGLE_API_KEY=...  (or OPENAI_API_KEY=...)
+```
+
+**3. Build and start all services:**
+
+```bash
+docker compose -f docker-compose.prod.yml up -d --build
+```
+
+**4. Run database migrations:**
+
+```bash
+docker compose -f docker-compose.prod.yml exec backend php artisan migrate --force
+```
+
+**5. Verify all services are healthy:**
+
+```bash
+docker compose -f docker-compose.prod.yml ps
+```
+
+### HTTPS / SSL
+
+Edit `nginx/nginx.conf` to uncomment the HTTPS server block. Place your SSL certificate and key at:
+
+```
+nginx/ssl/fullchain.pem
+nginx/ssl/privkey.pem
+```
+
+Then restart Nginx:
+
+```bash
+docker compose -f docker-compose.prod.yml restart nginx
+```
+
+We recommend using [Certbot](https://certbot.eff.org/) for free Let's Encrypt certificates.
+
+### Rate Limits
+
+| Endpoint                     | Limit                    |
+|------------------------------|--------------------------|
+| All API routes               | 100 requests/minute/IP   |
+| `POST /api/repositories`     | 10 requests/hour/user    |
+| `POST /api/repositories/*/reindex` | 10 requests/hour/user |
+| `POST /api/chat*`            | 30 requests/minute/user  |
+| `POST /api/auth/login`       | 5 attempts/15min/IP      |
+
+### Backup Strategy
+
+- **PostgreSQL**: Use `pg_dump` via a cron job or [pg_cron](https://github.com/citusdata/pg_cron).
+- **Qdrant**: The `qdrant_data` Docker volume contains all vectors. Back up the volume regularly.
+- **Redis**: Redis holds cache and queues only — no persistent data that cannot be recreated.
+
+### Monitoring
+
+All services expose health check endpoints:
+
+| Service     | Health check URL                |
+|-------------|--------------------------------|
+| Laravel     | `GET /up`                       |
+| AST Service | `GET http://ast-service:3001/health` |
+| Qdrant      | `GET http://qdrant:6333/health` |
+
+Set up uptime monitoring (e.g. [Uptime Kuma](https://github.com/louislam/uptime-kuma)) against `/up`.
+
+### Logging
+
+Production logs are written to `backend/storage/logs/laravel-YYYY-MM-DD.log`. Set `LOG_STACK=daily` and `LOG_LEVEL=warning` in production to keep logs manageable.
+
 ## Related Docs
 
 - [API Documentation](API.md)
-- [Deployment Guide](DEPLOYMENT.md)
 - [Contributing Guide](CONTRIBUTING.md)

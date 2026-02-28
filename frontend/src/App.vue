@@ -4,6 +4,7 @@
     <main class="flex-1">
       <RouterView />
     </main>
+    <ToastNotification />
   </div>
 </template>
 
@@ -11,12 +12,12 @@
 import { computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import AppHeader from '@/components/AppHeader.vue'
+import ToastNotification from '@/components/ToastNotification.vue'
 import { useAuthStore } from '@/stores/auth'
 
 const authStore = useAuthStore()
 const route = useRoute()
 
-// Hide the shared header on full-screen auth pages
 const showHeader = computed(() => !['login', 'register'].includes(route.name as string))
 
 onMounted(() => {

@@ -10,23 +10,29 @@ use App\Services\VectorDBService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Support\Facades\Cache;
 
 class RepositoryController extends Controller
 {
-    /**
-     * Maximum number of repositories allowed per user in the MVP.
-     */
     private const MAX_REPOSITORIES_PER_USER = 10;
+
+    private const REPO_LIST_TTL = 300; // 5 minutes
 
     /**
      * List all repositories for the authenticated user.
+     * Results are cached per user for 5 minutes.
      */
     public function index(Request $request): AnonymousResourceCollection
     {
-        $repositories = $request->user()
-            ->repositories()
-            ->latest()
-            ->paginate(20);
+        $userId = $request->user()->id;
+        $cacheKey = "repositories:user:{$userId}";
+
+        $repositories = Cache::remember($cacheKey, self::REPO_LIST_TTL, fn () =>
+            $request->user()
+                ->repositories()
+                ->latest()
+                ->paginate(20)
+        );
 
         return RepositoryResource::collection($repositories);
     }
@@ -61,8 +67,9 @@ class RepositoryController extends Controller
             'indexing_status' => 'pending',
         ]);
 
-        // Dispatch the background indexing job.
         IndexRepositoryJob::dispatch($repository);
+
+        Cache::forget("repositories:user:{$request->user()->id}");
 
         return (new RepositoryResource($repository))
             ->response()
@@ -92,7 +99,10 @@ class RepositoryController extends Controller
 
         $vectorDb->deleteCollection("repo_{$repository->id}");
 
+        $userId = $repository->user_id;
         $repository->delete();
+
+        Cache::forget("repositories:user:{$userId}");
 
         return response()->json(['message' => 'Repository deleted successfully.']);
     }
@@ -159,6 +169,8 @@ class RepositoryController extends Controller
         ]);
 
         IndexRepositoryJob::dispatch($repository);
+
+        Cache::forget("repositories:user:{$request->user()->id}");
 
         return response()->json([
             'message'       => 'Re-indexing has been queued.',
