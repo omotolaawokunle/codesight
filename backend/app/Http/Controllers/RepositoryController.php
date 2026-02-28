@@ -6,6 +6,7 @@ use App\Http\Requests\StoreRepositoryRequest;
 use App\Http\Resources\RepositoryResource;
 use App\Jobs\IndexRepositoryJob;
 use App\Models\Repository;
+use App\Services\VectorDBService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -80,10 +81,16 @@ class RepositoryController extends Controller
 
     /**
      * Delete a repository and its associated data.
+     *
+     * Removes the Qdrant vector collection first so we don't leave orphaned
+     * vectors even if the DB delete fails. CodeChunk rows are cascade-deleted
+     * by the database foreign key constraint.
      */
-    public function destroy(Request $request, Repository $repository): JsonResponse
+    public function destroy(Request $request, Repository $repository, VectorDBService $vectorDb): JsonResponse
     {
         $this->authorize('delete', $repository);
+
+        $vectorDb->deleteCollection("repo_{$repository->id}");
 
         $repository->delete();
 
@@ -114,10 +121,17 @@ class RepositoryController extends Controller
 
     /**
      * Reset the repository state and dispatch a fresh indexing job.
+     *
+     * Deletes the existing Qdrant collection and CodeChunk records so the
+     * pipeline starts from a clean slate.
      */
-    public function reindex(Request $request, Repository $repository): JsonResponse
+    public function reindex(Request $request, Repository $repository, VectorDBService $vectorDb): JsonResponse
     {
         $this->authorize('update', $repository);
+
+        $vectorDb->deleteCollection("repo_{$repository->id}");
+
+        $repository->codeChunks()->delete();
 
         $repository->update([
             'indexing_status'       => 'pending',
