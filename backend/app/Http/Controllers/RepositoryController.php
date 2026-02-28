@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreRepositoryRequest;
 use App\Http\Resources\RepositoryResource;
-use App\Jobs\IndexRepositoryJob;
+use App\Jobs\CloneRepositoryJob;
 use App\Models\Repository;
 use App\Services\VectorDBService;
 use Illuminate\Http\JsonResponse;
@@ -61,8 +61,7 @@ class RepositoryController extends Controller
             'indexing_status' => 'pending',
         ]);
 
-        // Dispatch the background indexing job.
-        IndexRepositoryJob::dispatch($repository);
+        CloneRepositoryJob::dispatch($repository);
 
         return (new RepositoryResource($repository))
             ->response()
@@ -142,7 +141,7 @@ class RepositoryController extends Controller
             'total_chunks'          => 0,
         ]);
 
-        IndexRepositoryJob::dispatch($repository);
+        CloneRepositoryJob::dispatch($repository);
 
         return response()->json([
             'message'       => 'Re-indexing has been queued.',

@@ -2,7 +2,7 @@
 
 namespace Tests\Feature;
 
-use App\Jobs\IndexRepositoryJob;
+use App\Jobs\CloneRepositoryJob;
 use App\Models\Repository;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -63,7 +63,7 @@ class RepositoryControllerTest extends TestCase
         ]);
 
         // Confirm the background job was dispatched.
-        Queue::assertPushed(IndexRepositoryJob::class);
+        Queue::assertPushed(CloneRepositoryJob::class);
     }
 
     public function test_user_can_create_private_repository_with_token(): void
@@ -93,7 +93,7 @@ class RepositoryControllerTest extends TestCase
 
         $response->assertUnprocessable();
         $response->assertJsonPath('message', fn ($msg) => str_contains($msg, 'maximum of 10 repositories'));
-        Queue::assertNotPushed(IndexRepositoryJob::class);
+        Queue::assertNotPushed(CloneRepositoryJob::class);
     }
 
     public function test_store_rejects_invalid_git_url(): void
@@ -225,7 +225,7 @@ class RepositoryControllerTest extends TestCase
             'indexing_status' => 'pending',
         ]);
 
-        Queue::assertPushed(IndexRepositoryJob::class);
+        Queue::assertPushed(CloneRepositoryJob::class);
     }
 
     public function test_user_cannot_reindex_another_users_repository(): void

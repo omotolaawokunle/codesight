@@ -6,13 +6,9 @@ use App\Models\CodeChunk;
 use App\Models\Repository;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
-use Throwable;
 
 class Indexer
 {
-    /** Number of files sent to the AST service per batch. */
-    private const FILE_BATCH_SIZE = 10;
-
     /** Maximum number of texts sent to the embedding API per call. */
     private const EMBEDDING_BATCH_SIZE = 100;
 
@@ -23,9 +19,12 @@ class Indexer
     ) {}
 
     /**
-     * Run the full indexing pipeline for a repository.
+     * Process a single pre-sized batch of files through the full indexing pipeline.
      *
-     * Steps for each batch of files:
+     * This is called by IndexFileBatchJob; each job owns exactly one batch so
+     * memory is bounded to that batch size rather than all files in the repo.
+     *
+     * Steps:
      *   1. Read file contents from disk
      *   2. Send to AST service for parsing
      *   3. Build embedding texts from chunk metadata + content
@@ -34,66 +33,32 @@ class Indexer
      *   6. Persist chunk metadata to PostgreSQL
      *   7. Update repository progress counters
      *
-     * @param  string[]  $filePaths  Absolute paths to files to index.
+     * @param  string[]  $filePaths  Absolute paths to files in this batch.
      */
-    public function run(Repository $repository, array $filePaths): void
+    public function runBatch(Repository $repository, array $filePaths): void
     {
         $collectionName = "repo_{$repository->id}";
-        $totalFiles     = count($filePaths);
-        $indexedFiles   = 0;
-        $totalChunks    = 0;
-
-        Log::info('Indexer: starting pipeline', [
-            'repository_id' => $repository->id,
-            'total_files'   => $totalFiles,
-            'collection'    => $collectionName,
-        ]);
 
         $this->vectorDb->createCollection($collectionName);
 
-        foreach (array_chunk($filePaths, self::FILE_BATCH_SIZE) as $batch) {
-            try {
-                $chunks = $this->parseFiles($batch);
+        $chunks = $this->parseFiles($filePaths);
 
-                if (empty($chunks)) {
-                    $indexedFiles += count($batch);
-                    $this->updateProgress($repository, $indexedFiles, $totalChunks);
-                    continue;
-                }
-
-                $vectors = $this->embedChunks($chunks);
-
-                $this->storeVectors($collectionName, $chunks, $vectors);
-                $this->storeChunkMetadata($repository->id, $chunks);
-
-                $indexedFiles += count($batch);
-                $totalChunks  += count($chunks);
-
-                $this->updateProgress($repository, $indexedFiles, $totalChunks);
-
-                Log::debug('Indexer: batch complete', [
-                    'repository_id' => $repository->id,
-                    'indexed_files' => $indexedFiles,
-                    'total_files'   => $totalFiles,
-                    'batch_chunks'  => count($chunks),
-                ]);
-
-            } catch (Throwable $e) {
-                Log::error('Indexer: batch failed', [
-                    'repository_id' => $repository->id,
-                    'error'         => $e->getMessage(),
-                    'files'         => $batch,
-                ]);
-                // Continue indexing remaining batches even if one fails.
-                $indexedFiles += count($batch);
-                $this->updateProgress($repository, $indexedFiles, $totalChunks);
-            }
+        if (empty($chunks)) {
+            $this->updateProgress($repository, count($filePaths), 0);
+            return;
         }
 
-        Log::info('Indexer: pipeline complete', [
+        $vectors = $this->embedChunks($chunks);
+
+        $this->storeVectors($collectionName, $chunks, $vectors);
+        $this->storeChunkMetadata($repository->id, $chunks);
+
+        $this->updateProgress($repository, count($filePaths), count($chunks));
+
+        Log::debug('Indexer: batch complete', [
             'repository_id' => $repository->id,
-            'indexed_files' => $indexedFiles,
-            'total_chunks'  => $totalChunks,
+            'files_in_batch' => count($filePaths),
+            'chunks_indexed' => count($chunks),
         ]);
     }
 
@@ -266,13 +231,17 @@ class Indexer
     }
 
     /**
-     * Update the repository's progress counters in the database.
+     * Atomically increment repository progress counters.
+     *
+     * Uses DB increments so concurrent IndexFileBatchJob workers don't
+     * overwrite each other's progress with stale in-memory values.
      */
-    private function updateProgress(Repository $repository, int $indexedFiles, int $totalChunks): void
+    private function updateProgress(Repository $repository, int $filesProcessed, int $chunksIndexed): void
     {
-        $repository->update([
-            'indexed_files' => $indexedFiles,
-            'total_chunks'  => $totalChunks,
-        ]);
+        $repository->increment('indexed_files', $filesProcessed);
+
+        if ($chunksIndexed > 0) {
+            $repository->increment('total_chunks', $chunksIndexed);
+        }
     }
 }
