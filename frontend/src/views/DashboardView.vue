@@ -1,16 +1,13 @@
 <template>
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-    <!-- Header -->
-    <div class="flex items-center justify-between mb-8">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+    <!-- Hero greeting -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
       <div>
-        <h1 class="text-2xl font-bold text-gray-900">My Repositories</h1>
-        <p class="text-sm text-gray-500 mt-1">
-          {{ repositories.length }} of {{ MAX_REPOS }} repositories
-        </p>
+        <h1 class="text-2xl font-bold text-gray-900">Welcome to Codesight</h1>
+        <p class="text-sm text-gray-500 mt-1">Your AI-powered codebase assistant</p>
       </div>
       <button
-        id="add-repository-btn"
-        class="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-medium px-4 py-2.5 rounded-xl shadow-sm transition-colors text-sm"
+        class="inline-flex items-center gap-2 bg-primary-600 hover:bg-primary-700 text-white font-medium px-4 py-2.5 rounded-xl shadow-sm transition-colors text-sm cursor-pointer"
         @click="showForm = true"
       >
         <PlusIcon class="h-4 w-4" />
@@ -18,67 +15,103 @@
       </button>
     </div>
 
-    <!-- Loading skeleton -->
-    <div v-if="store.isLoading && repositories.length === 0" class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+    <!-- Stats bar -->
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
       <div
-        v-for="n in 3"
-        :key="n"
-        class="bg-white rounded-xl border border-gray-200 p-5 animate-pulse space-y-3"
+        v-for="stat in stats"
+        :key="stat.label"
+        class="bg-white rounded-xl border border-gray-200 px-5 py-4 flex items-center gap-4"
       >
-        <div class="h-4 bg-gray-200 rounded w-3/4" />
-        <div class="h-3 bg-gray-100 rounded w-full" />
-        <div class="h-3 bg-gray-100 rounded w-1/2" />
+        <div
+          class="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+          :class="stat.iconBg"
+        >
+          <component :is="stat.icon" class="w-5 h-5" :class="stat.iconColor" />
+        </div>
+        <div>
+          <p class="text-2xl font-bold text-gray-900 leading-tight">{{ stat.value }}</p>
+          <p class="text-xs text-gray-500 mt-0.5">{{ stat.label }}</p>
+        </div>
       </div>
     </div>
 
-    <!-- Error state -->
-    <div
-      v-else-if="store.error"
-      class="text-center py-16 text-red-600 bg-red-50 rounded-xl border border-red-200"
-    >
-      <p class="font-medium">Failed to load repositories.</p>
-      <p class="text-sm mt-1 text-red-500">{{ store.error }}</p>
-      <button
-        class="mt-4 text-sm text-red-600 underline hover:no-underline"
-        @click="load"
-      >
-        Retry
-      </button>
-    </div>
-
-    <!-- Empty state -->
-    <div
-      v-else-if="!store.isLoading && repositories.length === 0"
-      class="text-center py-20"
-    >
-      <div class="mx-auto h-16 w-16 rounded-2xl bg-blue-50 flex items-center justify-center mb-4">
-        <CodeBracketIcon class="h-8 w-8 text-blue-500" />
+    <!-- Recent repositories -->
+    <section>
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-base font-semibold text-gray-900">Your Repositories</h2>
+        <span class="text-xs text-gray-400">{{ repositories.length }} / {{ MAX_REPOS }}</span>
       </div>
-      <h3 class="text-base font-semibold text-gray-900">No repositories yet</h3>
-      <p class="text-sm text-gray-500 mt-1 max-w-sm mx-auto">
-        Add a GitHub, GitLab, or Bitbucket repository to start asking AI questions about your code.
-      </p>
-      <button
-        class="mt-6 inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-medium px-4 py-2.5 rounded-xl text-sm transition-colors"
-        @click="showForm = true"
+
+      <!-- Loading -->
+      <div v-if="store.isLoading && repositories.length === 0" class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div
+          v-for="n in 3"
+          :key="n"
+          class="bg-white rounded-xl border border-gray-200 p-5 animate-pulse space-y-3"
+        >
+          <div class="h-4 bg-gray-200 rounded w-3/4" />
+          <div class="h-3 bg-gray-100 rounded w-full" />
+          <div class="h-3 bg-gray-100 rounded w-1/2" />
+        </div>
+      </div>
+
+      <!-- Error -->
+      <div
+        v-else-if="store.error"
+        class="text-center py-10 bg-red-50 border border-red-200 rounded-xl text-red-600"
       >
-        <PlusIcon class="h-4 w-4" />
-        Add your first repository
-      </button>
-    </div>
+        <p class="font-medium text-sm">Failed to load repositories.</p>
+        <button class="mt-2 text-xs text-red-500 underline cursor-pointer" @click="load">Retry</button>
+      </div>
 
-    <!-- Repository grid -->
-    <div v-else class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-      <RepositoryCard
-        v-for="repo in repositories"
-        :key="repo.id"
-        :repository="repo"
-        @delete="handleDelete"
-        @reindex="handleReindex"
-      />
-    </div>
+      <!-- Empty -->
+      <div v-else-if="!store.isLoading && repositories.length === 0" class="py-16 text-center">
+        <div class="mx-auto w-16 h-16 rounded-2xl bg-primary-50 flex items-center justify-center mb-4">
+          <CodeBracketIcon class="h-8 w-8 text-primary-500" />
+        </div>
+        <h3 class="text-sm font-semibold text-gray-900">No repositories yet</h3>
+        <p class="text-sm text-gray-500 mt-1 max-w-xs mx-auto">
+          Add a GitHub, GitLab, or Bitbucket repository to start chatting with your codebase.
+        </p>
+        <button
+          class="mt-5 inline-flex items-center gap-2 bg-primary-600 hover:bg-primary-700 text-white font-medium px-4 py-2.5 rounded-xl text-sm transition-colors cursor-pointer"
+          @click="showForm = true"
+        >
+          <PlusIcon class="h-4 w-4" />
+          Add your first repository
+        </button>
+      </div>
 
-    <!-- Toast notification -->
+      <!-- Grid -->
+      <div v-else class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <RepositoryCard
+          v-for="repo in repositories"
+          :key="repo.id"
+          :repository="repo"
+          @delete="handleDelete"
+          @reindex="handleReindex"
+        />
+      </div>
+    </section>
+
+    <!-- Quick-start guide (shown only when repos exist but none indexed) -->
+    <section v-if="repositories.length > 0 && !hasIndexedRepo">
+      <div class="rounded-2xl bg-linear-to-br from-primary-50 to-indigo-50 border border-primary-100 p-6">
+        <div class="flex items-start gap-4">
+          <div class="w-10 h-10 rounded-xl bg-primary-100 flex items-center justify-center shrink-0">
+            <LightBulbIcon class="w-5 h-5 text-primary-600" />
+          </div>
+          <div>
+            <h3 class="text-sm font-semibold text-gray-900 mb-1">Indexing in progress</h3>
+            <p class="text-sm text-gray-600 leading-relaxed">
+              Your repository is being parsed and indexed. Once complete, you'll be able to ask natural-language questions about your code, debug errors, and explore the architecture.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Toast -->
     <Transition
       enter-active-class="transition duration-200 ease-out"
       enter-from-class="translate-y-2 opacity-0"
@@ -96,25 +129,66 @@
       </div>
     </Transition>
 
-    <!-- Add repository modal -->
     <RepositoryForm v-model="showForm" @created="onCreated" />
   </div>
 </template>
 
 <script setup lang="ts">
+import { computed, onMounted, ref, watch } from 'vue'
+import { useRepositoryStore } from '@/stores/repository'
+import type { Repository } from '@/types'
 import RepositoryCard from '@/components/RepositoryCard.vue'
 import RepositoryForm from '@/components/RepositoryForm.vue'
 import { usePolling } from '@/composables/usePolling'
-import { useRepositoryStore } from '@/stores/repository'
-import type { Repository } from '@/types'
-import { CodeBracketIcon, PlusIcon } from '@heroicons/vue/24/outline'
-import { computed, onMounted, ref, watch } from 'vue'
+import {
+  CodeBracketIcon,
+  PlusIcon,
+  CircleStackIcon,
+  CubeTransparentIcon,
+  CheckCircleIcon,
+  LightBulbIcon,
+} from '@heroicons/vue/24/outline'
 
 const MAX_REPOS = 10
 
-const store      = useRepositoryStore()
-const showForm   = ref(false)
+const store = useRepositoryStore()
+const showForm = ref(false)
 const repositories = computed(() => store.repositories)
+
+const hasIndexedRepo = computed(() =>
+  repositories.value.some((r) => r.indexing_status === 'completed'),
+)
+
+const stats = computed(() => [
+  {
+    label: 'Repositories',
+    value: repositories.value.length,
+    icon: CodeBracketIcon,
+    iconBg: 'bg-primary-50',
+    iconColor: 'text-primary-500',
+  },
+  {
+    label: 'Indexed',
+    value: repositories.value.filter((r) => r.indexing_status === 'completed').length,
+    icon: CheckCircleIcon,
+    iconBg: 'bg-green-50',
+    iconColor: 'text-green-500',
+  },
+  {
+    label: 'Total Files',
+    value: repositories.value.reduce((s, r) => s + (r.total_files ?? 0), 0),
+    icon: CircleStackIcon,
+    iconBg: 'bg-amber-50',
+    iconColor: 'text-amber-500',
+  },
+  {
+    label: 'Code Chunks',
+    value: repositories.value.reduce((s, r) => s + (r.total_chunks ?? 0), 0),
+    icon: CubeTransparentIcon,
+    iconBg: 'bg-violet-50',
+    iconColor: 'text-violet-500',
+  },
+])
 
 // ----- Toast ----------------------------------------------------------------
 
@@ -130,19 +204,13 @@ function showToast(message: string, type: 'success' | 'error' = 'success') {
 // ----- Polling --------------------------------------------------------------
 
 const { start: startPolling, stop: stopPolling } = usePolling(async () => {
-  const inProgressIds = repositories.value
+  const activeIds = repositories.value
     .filter((r) => r.indexing_status === 'in_progress' || r.indexing_status === 'pending')
     .map((r) => r.id)
-
-  if (inProgressIds.length === 0) {
-    stopPolling()
-    return
-  }
-
-  await Promise.all(inProgressIds.map((id) => store.fetchStatus(id)))
+  if (activeIds.length === 0) { stopPolling(); return }
+  await Promise.all(activeIds.map((id) => store.fetchStatus(id)))
 })
 
-/** Watch the repository list and start polling whenever any repo is active. */
 watch(
   repositories,
   (repos) => {
@@ -160,9 +228,7 @@ watch(
 async function load() {
   try {
     await store.fetchRepositories()
-  } catch {
-    // Error already set in store
-  }
+  } catch { /* Error already in store */ }
 }
 
 async function handleDelete(id: number) {

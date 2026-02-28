@@ -18,6 +18,22 @@ return [
     'default_for_audio' => 'openai',
     'default_for_transcription' => 'openai',
     'default_for_embeddings' => 'gemini',
+
+    /*
+    |--------------------------------------------------------------------------
+    | Chat Provider & Model
+    |--------------------------------------------------------------------------
+    |
+    | The provider and model used for RAG-based chat responses. Swap these
+    | env variables to switch providers without any code changes.
+    |
+    | Default: Gemini 2.0 Flash (fast, cost-effective for development/MVP)
+    | Production alternative: anthropic / claude-sonnet-4-5-20250929
+    |
+    */
+
+    'chat_provider' => env('AI_CHAT_PROVIDER', 'gemini'),
+    'chat_model'    => env('AI_CHAT_MODEL', 'gemini-3.0-flash'),
     'default_for_reranking' => 'cohere',
 
     /*

@@ -21,4 +21,5 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/chat/stream', [ChatController::class, 'stream']);
     Route::post('/chat/analyze-error', [ChatController::class, 'analyzeError']);
     Route::get('/chat/{repositoryId}/conversations', [ChatController::class, 'conversations']);
+    Route::delete('/chat/conversations/{id}', [ChatController::class, 'deleteConversation']);
 });
