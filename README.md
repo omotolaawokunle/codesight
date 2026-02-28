@@ -1,6 +1,6 @@
 # Codesight
 
-An AI-powered codebase support tool. Index your Git repositories and ask natural language questions about your code — powered by RAG (Retrieval-Augmented Generation) with Claude and Gemini embeddings.
+An AI-powered codebase support tool. Index your Git repositories and ask natural language questions about your code — powered by RAG (Retrieval-Augmented Generation).
 
 ## Architecture
 
