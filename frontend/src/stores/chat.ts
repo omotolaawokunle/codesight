@@ -1,7 +1,8 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import type { Conversation, Message } from '@/types'
+import type { Conversation, Message, CodeSource } from '@/types'
 import api from '@/services/api'
+import { useStreaming } from '@/composables/useStreaming'
 
 export const useChatStore = defineStore('chat', () => {
   const conversations = ref<Conversation[]>([])
@@ -10,6 +11,8 @@ export const useChatStore = defineStore('chat', () => {
   const isLoading = ref(false)
   const isStreaming = ref(false)
   const error = ref<string | null>(null)
+
+  const { stream } = useStreaming()
 
   async function fetchConversations(repositoryId: number) {
     isLoading.value = true
@@ -34,10 +37,126 @@ export const useChatStore = defineStore('chat', () => {
         message,
         conversation_id: conversationId,
       })
+
+      // Update conversation list if new conversation was created
+      if (!conversationId && data.conversation_id) {
+        await fetchConversations(repositoryId)
+        const conv = conversations.value.find((c) => c.id === data.conversation_id)
+        if (conv) currentConversation.value = conv
+      }
+
       return data
     } catch (err: unknown) {
       error.value = 'Failed to send message'
       throw err
+    } finally {
+      isLoading.value = false
+    }
+  }
+
+  /**
+   * Stream a message via SSE. Appends a placeholder assistant message that fills in
+   * as chunks arrive, then updates it with the final content and sources.
+   */
+  async function streamMessage(
+    repositoryId: number,
+    userText: string,
+    conversationId?: number,
+  ): Promise<{ conversation_id: number; sources: CodeSource[] }> {
+    error.value = null
+
+    // Optimistically add the user message
+    const tempUserMsg: Message = {
+      id: Date.now(),
+      conversation_id: conversationId ?? 0,
+      role: 'user',
+      content: userText,
+      metadata: null,
+      created_at: new Date().toISOString(),
+    }
+    messages.value.push(tempUserMsg)
+
+    // Placeholder for the streaming assistant reply
+    const tempAssistantMsg: Message = {
+      id: Date.now() + 1,
+      conversation_id: conversationId ?? 0,
+      role: 'assistant',
+      content: '',
+      metadata: null,
+      created_at: new Date().toISOString(),
+    }
+    messages.value.push(tempAssistantMsg)
+
+    isStreaming.value = true
+    let finalSources: CodeSource[] = []
+    let finalConversationId = conversationId ?? 0
+
+    const baseUrl = import.meta.env.VITE_API_URL ?? 'http://localhost:8000/api'
+
+    try {
+      await stream(
+        `${baseUrl}/chat/stream`,
+        { repository_id: repositoryId, message: userText, conversation_id: conversationId },
+        (chunk) => {
+          tempAssistantMsg.content += chunk
+          // Vue reactivity — replace the array item to trigger updates
+          const idx = messages.value.findIndex((m) => m.id === tempAssistantMsg.id)
+          if (idx !== -1) messages.value[idx] = { ...tempAssistantMsg }
+        },
+        (sources) => {
+          finalSources = sources ?? []
+          const idx = messages.value.findIndex((m) => m.id === tempAssistantMsg.id)
+          if (idx !== -1) {
+            messages.value[idx] = {
+              ...tempAssistantMsg,
+              metadata: { sources: finalSources },
+            }
+          }
+        },
+      )
+
+      // Refresh conversations to get the real IDs / updated title
+      await fetchConversations(repositoryId)
+      const latest = conversations.value[0]
+      if (latest) {
+        finalConversationId = latest.id
+        currentConversation.value = latest
+      }
+    } catch (err: unknown) {
+      error.value = 'Failed to stream response'
+      // Remove the incomplete assistant message on error
+      messages.value = messages.value.filter((m) => m.id !== tempAssistantMsg.id)
+      throw err
+    } finally {
+      isStreaming.value = false
+    }
+
+    return { conversation_id: finalConversationId, sources: finalSources }
+  }
+
+  async function deleteConversation(conversationId: number) {
+    try {
+      await api.delete(`/chat/conversations/${conversationId}`)
+      conversations.value = conversations.value.filter((c) => c.id !== conversationId)
+      if (currentConversation.value?.id === conversationId) {
+        currentConversation.value = null
+        messages.value = []
+      }
+    } catch (err: unknown) {
+      error.value = 'Failed to delete conversation'
+      throw err
+    }
+  }
+
+  async function loadConversationMessages(conversation: Conversation) {
+    currentConversation.value = conversation
+    isLoading.value = true
+    error.value = null
+    try {
+      const { data } = await api.get(`/chat/conversations/${conversation.id}/messages`)
+      messages.value = data.data ?? data
+    } catch {
+      messages.value = conversation.messages ?? []
     } finally {
       isLoading.value = false
     }
@@ -62,6 +181,9 @@ export const useChatStore = defineStore('chat', () => {
     error,
     fetchConversations,
     sendMessage,
+    streamMessage,
+    deleteConversation,
+    loadConversationMessages,
     setCurrentConversation,
     clearConversation,
   }

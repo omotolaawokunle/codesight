@@ -216,7 +216,7 @@ async function submit() {
     if (response?.status === 422 && response.data.errors) {
       const fieldErrors: Record<string, string> = {}
       for (const [field, messages] of Object.entries(response.data.errors)) {
-        fieldErrors[field] = Array.isArray(messages) ? messages[0] : String(messages)
+        fieldErrors[field] = Array.isArray(messages) ? (messages[0] ?? '') : String(messages)
       }
       errors.value = fieldErrors
     } else {
