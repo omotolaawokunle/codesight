@@ -100,6 +100,44 @@ class VectorDBService
     }
 
     /**
+     * Scroll through points in a Qdrant collection matching a payload filter.
+     *
+     * Uses Qdrant's scroll API with a "must match" filter on the given field.
+     * Useful for fetching all chunks belonging to a specific file path.
+     *
+     * @return array<int, array{id: string, payload: array<string, mixed>}>
+     */
+    public function scrollByFilter(string $collectionName, string $field, string $value, int $limit = 100): array
+    {
+        $response = $this->client()->post("/collections/{$collectionName}/points/scroll", [
+            'filter' => [
+                'must' => [
+                    [
+                        'key'   => $field,
+                        'match' => ['value' => $value],
+                    ],
+                ],
+            ],
+            'limit'        => $limit,
+            'with_payload' => true,
+            'with_vector'  => false,
+        ]);
+
+        if ($response->failed()) {
+            Log::warning('VectorDBService: scroll failed', [
+                'collection' => $collectionName,
+                'field'      => $field,
+                'value'      => $value,
+                'status'     => $response->status(),
+            ]);
+
+            return [];
+        }
+
+        return $response->json('result.points', []);
+    }
+
+    /**
      * Delete a Qdrant collection and all its vectors.
      * Silently ignores 404 (collection does not exist).
      */
