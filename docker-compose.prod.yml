@@ -7,7 +7,7 @@ services:
     environment:
       POSTGRES_DB: ${DB_DATABASE:-codesight}
       POSTGRES_USER: ${DB_USERNAME:-codesight}
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-codesight}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
@@ -40,7 +40,8 @@ services:
     networks:
       - internal
     healthcheck:
-      test: ["CMD-SHELL", "curl -sf http://localhost:6333/health || exit 1"]
+      # Use bash TCP to check port 6333 — qdrant image has neither curl nor wget
+      test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/localhost/6333' 2>/dev/null || exit 1"]
       interval: 15s
       timeout: 5s
       retries: 5
@@ -104,6 +105,10 @@ services:
     volumes:
       - backend_storage:/var/www/html/storage
     depends_on:
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
       backend:
         condition: service_healthy
     networks:
