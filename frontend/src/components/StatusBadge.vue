@@ -17,10 +17,10 @@ const props = defineProps<{
 }>()
 
 const config: Record<IndexingStatus, { label: string; classes: string; ping: string; dot: string }> = {
-  pending:     { label: 'Pending',     classes: 'bg-gray-100 text-gray-600 ring-gray-500/20',   ping: '', dot: '' },
-  in_progress: { label: 'Indexing…',  classes: 'bg-blue-50 text-blue-700 ring-blue-600/20',    ping: 'bg-blue-400', dot: 'bg-blue-500' },
-  completed:   { label: 'Indexed',    classes: 'bg-green-50 text-green-700 ring-green-600/20', ping: '', dot: '' },
-  failed:      { label: 'Failed',     classes: 'bg-red-50 text-red-700 ring-red-600/20',       ping: '', dot: '' },
+  pending:     { label: 'Pending',    classes: 'bg-slate-800 text-slate-400 ring-slate-600/30',      ping: '', dot: '' },
+  in_progress: { label: 'Indexing…', classes: 'bg-accent-900/40 text-accent-400 ring-accent-500/30', ping: 'bg-accent-400', dot: 'bg-accent-500' },
+  completed:   { label: 'Indexed',   classes: 'bg-primary-950/60 text-primary-400 ring-primary-500/30', ping: '', dot: '' },
+  failed:      { label: 'Failed',    classes: 'bg-red-950/40 text-red-400 ring-red-500/30',          ping: '', dot: '' },
 }
 
 const label       = computed(() => config[props.status].label)

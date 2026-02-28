@@ -1,11 +1,11 @@
 <template>
-  <div class="bg-white rounded-xl border border-gray-200 p-5 hover:shadow-md transition-shadow duration-200 flex flex-col gap-4">
+  <div class="bg-slate-900 rounded-xl border border-slate-800 p-5 hover:border-slate-700 transition-colors duration-200 flex flex-col gap-4">
     <!-- Header: name + status -->
     <div class="flex items-start justify-between gap-3">
       <div class="min-w-0 flex-1">
         <RouterLink
           :to="{ name: 'repository-detail', params: { id: repository.id } }"
-          class="text-base font-semibold text-gray-900 hover:text-blue-600 truncate block"
+          class="text-base font-semibold text-slate-100 hover:text-primary-400 truncate block transition-colors"
         >
           {{ repository.name }}
         </RouterLink>
@@ -13,7 +13,7 @@
           :href="repository.git_url"
           target="_blank"
           rel="noopener noreferrer"
-          class="text-xs text-gray-400 hover:text-blue-500 truncate block mt-0.5"
+          class="text-xs font-mono text-slate-600 hover:text-slate-400 truncate block mt-0.5 transition-colors"
         >
           {{ repository.git_url }}
         </a>
@@ -32,50 +32,58 @@
     <!-- Error message -->
     <p
       v-if="repository.indexing_status === 'failed'"
-      class="text-xs text-red-600 bg-red-50 rounded-lg px-3 py-2"
+      class="text-xs text-red-400 bg-red-950/30 border border-red-900/50 rounded-lg px-3 py-2"
     >
       {{ repository.indexing_error ?? 'Indexing failed. Please try re-indexing.' }}
     </p>
 
     <!-- Stats row -->
-    <div class="flex gap-4 text-xs text-gray-500">
+    <div class="flex gap-4 text-xs font-mono text-slate-600">
       <span v-if="repository.total_files != null">
-        <span class="font-medium text-gray-700">{{ repository.total_files }}</span> files
+        <span class="font-medium text-slate-400">{{ repository.total_files }}</span> files
       </span>
       <span v-if="repository.total_chunks">
-        <span class="font-medium text-gray-700">{{ repository.total_chunks }}</span> chunks
+        <span class="font-medium text-slate-400">{{ repository.total_chunks }}</span> chunks
       </span>
       <span class="ml-auto">
-        Branch: <span class="font-medium text-gray-700">{{ repository.branch }}</span>
+        <span class="text-slate-600">branch: </span><span class="text-slate-400">{{ repository.branch }}</span>
       </span>
     </div>
 
     <!-- Action buttons -->
-    <div class="flex gap-2 pt-1 border-t border-gray-100">
+    <div class="flex gap-2 pt-1 border-t border-slate-800">
+      <!-- Primary: Chat (only when indexed) -->
+      <RouterLink
+        v-if="repository.indexing_status === 'completed'"
+        :to="{ name: 'repository-chat', params: { id: repository.id } }"
+        class="flex-1 text-center text-xs font-bold text-slate-950 bg-primary-500 hover:bg-primary-400 py-1.5 rounded-lg transition-colors cursor-pointer"
+      >
+        Chat
+      </RouterLink>
+
       <RouterLink
         :to="{ name: 'repository-detail', params: { id: repository.id } }"
-        class="flex-1 text-center text-xs font-medium text-blue-600 hover:text-blue-700 py-1.5 rounded-lg hover:bg-blue-50 transition-colors"
+        class="flex-1 text-center text-xs font-medium text-slate-400 hover:text-slate-200 py-1.5 rounded-lg hover:bg-slate-800 transition-colors cursor-pointer"
       >
-        View Details
+        Details
       </RouterLink>
 
       <button
         :disabled="repository.indexing_status === 'in_progress'"
-        class="flex-1 text-center text-xs font-medium text-gray-600 hover:text-gray-700 py-1.5 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+        class="flex-1 text-center text-xs font-medium text-slate-500 hover:text-slate-300 py-1.5 rounded-lg hover:bg-slate-800 transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
         @click="emit('reindex', repository.id)"
       >
         Re-index
       </button>
 
       <button
-        class="flex-1 text-center text-xs font-medium text-red-500 hover:text-red-600 py-1.5 rounded-lg hover:bg-red-50 transition-colors"
+        class="flex-1 text-center text-xs font-medium text-slate-500 hover:text-red-400 py-1.5 rounded-lg hover:bg-red-950/30 transition-colors cursor-pointer"
         @click="showConfirm = true"
       >
         Delete
       </button>
     </div>
 
-    <!-- HeadlessUI confirm dialog -->
     <ConfirmDialog
       v-model="showConfirm"
       title="Delete Repository"

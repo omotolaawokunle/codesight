@@ -23,8 +23,11 @@ app.get('/health', (_req, res) => {
 
 app.use('/api/ast', parseRouter)
 
-app.listen(PORT, () => {
-  console.log(`AST service running on port ${PORT}`)
-})
+// Only start the HTTP server when running directly (not when imported by tests)
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`AST service running on port ${PORT}`)
+  })
+}
 
 export default app
