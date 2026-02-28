@@ -4,10 +4,10 @@ namespace App\Jobs;
 
 use App\Models\Repository;
 use App\Services\GitManager;
+use App\Services\Indexer;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Log;
-use RuntimeException;
 use Throwable;
 
 class IndexRepositoryJob implements ShouldQueue
@@ -53,13 +53,14 @@ class IndexRepositoryJob implements ShouldQueue
     ) {}
 
     /**
-     * Execute the indexing pipeline for Batch 2 scope:
+     * Execute the full indexing pipeline:
      * 1. Clone the repository
      * 2. Scan and filter eligible source files
-     * 3. Record the commit hash and file count
-     * 4. Mark as completed (AST + embedding handled in Batches 3 & 4)
+     * 3. Record the commit hash and total file count
+     * 4. Run AST parsing, embedding, and vector storage via Indexer
+     * 5. Mark as completed
      */
-    public function handle(GitManager $git): void
+    public function handle(GitManager $git, Indexer $indexer): void
     {
         $repoId  = $this->repository->id;
         $clonePath = "/tmp/repos/{$repoId}";
@@ -100,17 +101,23 @@ class IndexRepositoryJob implements ShouldQueue
             Log::info("IndexRepositoryJob: scan complete", [
                 'repository_id' => $repoId,
                 'total_files'   => $totalFiles,
-                'note'          => 'AST parsing and embedding deferred to Batches 3 & 4',
             ]);
 
-            // ── Step 5: Update repository with results ────────────────────────
+            // ── Step 5: Record commit hash and total file count ───────────────
+            $this->repository->update([
+                'total_files'         => $totalFiles,
+                'last_indexed_commit' => $commitHash,
+            ]);
+
+            // ── Step 6: Run full indexing pipeline ───────────────────────────
+            // Parses files via AST service, generates Gemini embeddings,
+            // stores vectors in Qdrant, and persists metadata to PostgreSQL.
+            $indexer->run($this->repository, $files);
+
+            // ── Step 7: Mark as completed ─────────────────────────────────────
             $this->repository->update([
                 'indexing_status'       => 'completed',
                 'indexing_completed_at' => now(),
-                'total_files'           => $totalFiles,
-                'indexed_files'         => 0,   // Will be populated by Batch 4
-                'total_chunks'          => 0,   // Will be populated by Batch 4
-                'last_indexed_commit'   => $commitHash,
             ]);
 
             Log::info("IndexRepositoryJob: completed", [
