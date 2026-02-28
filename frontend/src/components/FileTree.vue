@@ -5,6 +5,7 @@
       :key="node.name"
       :node="node"
       :depth="0"
+      :selected-path="selectedPath"
       @select-file="$emit('select-file', $event)"
     />
   </div>
@@ -19,10 +20,12 @@ const FileTreeNode = defineAsyncComponent(() => import('./FileTreeNode.vue'))
 interface Props {
   filePaths: string[]
   ariaLabel?: string
+  selectedPath?: string
 }
 
 const props = withDefaults(defineProps<Props>(), {
   ariaLabel: 'File tree',
+  selectedPath: '',
 })
 
 defineEmits<{

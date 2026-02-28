@@ -6,6 +6,7 @@ use App\Jobs\IndexRepositoryJob;
 use App\Models\Repository;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
 use Tests\TestCase;
 
@@ -155,6 +156,8 @@ class RepositoryControllerTest extends TestCase
 
     public function test_user_can_delete_their_repository(): void
     {
+        Http::fake(['*' => Http::response(['result' => true], 200)]);
+
         $repo = Repository::factory()->create(['user_id' => $this->user->id]);
 
         $this->actingAs($this->user)
@@ -212,6 +215,8 @@ class RepositoryControllerTest extends TestCase
 
     public function test_can_reindex_repository(): void
     {
+        Http::fake(['*' => Http::response(['result' => true], 200)]);
+
         $repo = Repository::factory()->completed()->create(['user_id' => $this->user->id]);
 
         $response = $this->actingAs($this->user)

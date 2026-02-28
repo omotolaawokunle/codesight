@@ -11,7 +11,7 @@
         leave-from="opacity-100"
         leave-to="opacity-0"
       >
-        <div class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm" />
+        <div class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm" />
       </TransitionChild>
 
       <!-- Panel -->
@@ -25,21 +25,21 @@
           leave-from="opacity-100 scale-100"
           leave-to="opacity-0 scale-95"
         >
-          <DialogPanel class="w-full max-w-sm bg-white rounded-2xl shadow-xl p-6 space-y-4">
+          <DialogPanel class="w-full max-w-sm bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl p-6 space-y-4">
             <!-- Icon + Title -->
             <div class="flex items-start gap-4">
               <div
                 class="flex-shrink-0 flex h-10 w-10 items-center justify-center rounded-full"
                 :class="iconBg"
               >
-                <ExclamationTriangleIcon v-if="variant === 'danger'" class="h-5 w-5 text-red-600" />
-                <InformationCircleIcon v-else class="h-5 w-5 text-blue-600" />
+                <ExclamationTriangleIcon v-if="variant === 'danger'" class="h-5 w-5 text-red-400" />
+                <InformationCircleIcon v-else class="h-5 w-5 text-accent-400" />
               </div>
               <div>
-                <DialogTitle class="text-base font-semibold text-gray-900">
+                <DialogTitle class="text-base font-semibold text-slate-100">
                   {{ title }}
                 </DialogTitle>
-                <p class="mt-1 text-sm text-gray-500">{{ description }}</p>
+                <p class="mt-1 text-sm text-slate-400">{{ description }}</p>
               </div>
             </div>
 
@@ -47,14 +47,14 @@
             <div class="flex gap-3 justify-end">
               <button
                 type="button"
-                class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                class="rounded-xl border border-slate-700 px-4 py-2 text-sm font-medium text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition-colors cursor-pointer"
                 @click="cancel"
               >
                 {{ cancelLabel }}
               </button>
               <button
                 type="button"
-                class="rounded-lg px-4 py-2 text-sm font-medium text-white transition-colors"
+                class="rounded-xl px-4 py-2 text-sm font-medium transition-colors cursor-pointer"
                 :class="confirmBtnClass"
                 @click="confirm"
               >
@@ -101,13 +101,13 @@ const emit = defineEmits<{
 }>()
 
 const iconBg = computed(() =>
-  props.variant === 'danger' ? 'bg-red-50' : 'bg-blue-50'
+  props.variant === 'danger' ? 'bg-red-950/50' : 'bg-accent-950/50'
 )
 
 const confirmBtnClass = computed(() =>
   props.variant === 'danger'
-    ? 'bg-red-600 hover:bg-red-700'
-    : 'bg-blue-600 hover:bg-blue-700'
+    ? 'bg-red-600 hover:bg-red-500 text-white'
+    : 'bg-accent-600 hover:bg-accent-500 text-white'
 )
 
 function confirm() {

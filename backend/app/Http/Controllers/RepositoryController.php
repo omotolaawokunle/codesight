@@ -98,6 +98,22 @@ class RepositoryController extends Controller
     }
 
     /**
+     * Return the distinct file paths that have been indexed for this repository.
+     * Used to populate the file tree on the repository detail page.
+     */
+    public function files(Request $request, Repository $repository): JsonResponse
+    {
+        $this->authorize('view', $repository);
+
+        $filePaths = $repository->codeChunks()
+            ->distinct()
+            ->orderBy('file_path')
+            ->pluck('file_path');
+
+        return response()->json(['file_paths' => $filePaths]);
+    }
+
+    /**
      * Get the current indexing status and progress for a repository.
      */
     public function status(Request $request, Repository $repository): JsonResponse

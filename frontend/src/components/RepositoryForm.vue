@@ -11,7 +11,7 @@
         leave-from="opacity-100"
         leave-to="opacity-0"
       >
-        <div class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm" />
+        <div class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm" />
       </TransitionChild>
 
       <!-- Panel -->
@@ -25,14 +25,14 @@
           leave-from="opacity-100 scale-100"
           leave-to="opacity-0 scale-95"
         >
-          <DialogPanel class="w-full max-w-md bg-white rounded-2xl shadow-xl p-6 space-y-5">
+          <DialogPanel class="w-full max-w-md bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl p-6 space-y-5">
             <!-- Header -->
             <div class="flex items-center justify-between">
-              <DialogTitle class="text-lg font-semibold text-gray-900">
+              <DialogTitle class="text-lg font-mono font-semibold text-slate-100">
                 Add Repository
               </DialogTitle>
               <button
-                class="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
+                class="p-1.5 rounded-lg text-slate-500 hover:text-slate-300 hover:bg-slate-800 transition-colors cursor-pointer"
                 aria-label="Close"
                 @click="close"
               >
@@ -44,8 +44,8 @@
             <form class="space-y-4" @submit.prevent="submit">
               <!-- Repository Name -->
               <div>
-                <label for="repo-name" class="block text-sm font-medium text-gray-700 mb-1">
-                  Repository Name <span class="text-red-500">*</span>
+                <label for="repo-name" class="block text-sm font-medium text-slate-300 mb-1.5">
+                  Repository Name <span class="text-red-400">*</span>
                 </label>
                 <input
                   id="repo-name"
@@ -53,16 +53,18 @@
                   type="text"
                   autocomplete="off"
                   placeholder="My Awesome Project"
-                  class="w-full rounded-lg border px-3 py-2.5 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  :class="errors.name ? 'border-red-400' : 'border-gray-300'"
+                  class="w-full bg-slate-800 rounded-xl border px-3 py-2.5 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:ring-2 transition-colors"
+                  :class="errors.name
+                    ? 'border-red-700 focus:ring-red-500/30'
+                    : 'border-slate-700 focus:border-primary-500 focus:ring-primary-500/20'"
                 />
-                <p v-if="errors.name" class="mt-1 text-xs text-red-500">{{ errors.name }}</p>
+                <p v-if="errors.name" class="mt-1 text-xs text-red-400">{{ errors.name }}</p>
               </div>
 
               <!-- Git URL -->
               <div>
-                <label for="repo-url" class="block text-sm font-medium text-gray-700 mb-1">
-                  Git URL <span class="text-red-500">*</span>
+                <label for="repo-url" class="block text-sm font-medium text-slate-300 mb-1.5">
+                  Git URL <span class="text-red-400">*</span>
                 </label>
                 <input
                   id="repo-url"
@@ -70,31 +72,33 @@
                   type="url"
                   autocomplete="off"
                   placeholder="https://github.com/owner/repo"
-                  class="w-full rounded-lg border px-3 py-2.5 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
-                  :class="errors.git_url ? 'border-red-400' : 'border-gray-300'"
+                  class="w-full bg-slate-800 rounded-xl border px-3 py-2.5 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:ring-2 font-mono transition-colors"
+                  :class="errors.git_url
+                    ? 'border-red-700 focus:ring-red-500/30'
+                    : 'border-slate-700 focus:border-primary-500 focus:ring-primary-500/20'"
                 />
-                <p v-if="errors.git_url" class="mt-1 text-xs text-red-500">{{ errors.git_url }}</p>
-                <p class="mt-1 text-xs text-gray-400">Supports GitHub, GitLab, and Bitbucket HTTPS URLs.</p>
+                <p v-if="errors.git_url" class="mt-1 text-xs text-red-400">{{ errors.git_url }}</p>
+                <p class="mt-1 text-xs text-slate-600">Supports GitHub, GitLab, and Bitbucket HTTPS URLs.</p>
               </div>
 
               <!-- Branch -->
               <div>
-                <label for="repo-branch" class="block text-sm font-medium text-gray-700 mb-1">Branch</label>
+                <label for="repo-branch" class="block text-sm font-medium text-slate-300 mb-1.5">Branch</label>
                 <input
                   id="repo-branch"
                   v-model="form.branch"
                   type="text"
                   autocomplete="off"
                   placeholder="main"
-                  class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2.5 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:ring-2 focus:border-primary-500 focus:ring-primary-500/20 transition-colors"
                 />
               </div>
 
               <!-- Git Token -->
               <div>
-                <label for="repo-token" class="block text-sm font-medium text-gray-700 mb-1">
+                <label for="repo-token" class="block text-sm font-medium text-slate-300 mb-1.5">
                   Personal Access Token
-                  <span class="font-normal text-gray-400">(for private repos)</span>
+                  <span class="font-normal text-slate-600">(for private repos)</span>
                 </label>
                 <input
                   id="repo-token"
@@ -102,15 +106,15 @@
                   type="password"
                   autocomplete="new-password"
                   placeholder="ghp_xxxxxxxxxxxxxxxx"
-                  class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
+                  class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2.5 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:ring-2 focus:border-primary-500 focus:ring-primary-500/20 font-mono transition-colors"
                 />
-                <p class="mt-1 text-xs text-gray-400">
+                <p class="mt-1 text-xs text-slate-600">
                   Stored encrypted. Required for private repositories.
                 </p>
               </div>
 
               <!-- Server-level error -->
-              <p v-if="serverError" class="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">
+              <p v-if="serverError" class="text-sm text-red-400 bg-red-950/30 border border-red-900/50 rounded-xl px-3 py-2">
                 {{ serverError }}
               </p>
 
@@ -118,7 +122,7 @@
               <div class="flex gap-3 pt-1">
                 <button
                   type="button"
-                  class="flex-1 rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                  class="flex-1 rounded-xl border border-slate-700 px-4 py-2.5 text-sm font-medium text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition-colors cursor-pointer"
                   @click="close"
                 >
                   Cancel
@@ -126,7 +130,7 @@
                 <button
                   type="submit"
                   :disabled="isSubmitting"
-                  class="flex-1 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
+                  class="flex-1 rounded-xl bg-primary-500 hover:bg-primary-400 px-4 py-2.5 text-sm font-bold text-slate-950 disabled:opacity-60 disabled:cursor-not-allowed transition-colors cursor-pointer"
                 >
                   {{ isSubmitting ? 'Adding…' : 'Add Repository' }}
                 </button>
