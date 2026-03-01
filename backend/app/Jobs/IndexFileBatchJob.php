@@ -4,6 +4,7 @@ namespace App\Jobs;
 
 use App\Models\Repository;
 use App\Services\Indexer;
+use Illuminate\Bus\Batchable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Log;
@@ -11,7 +12,7 @@ use Throwable;
 
 class IndexFileBatchJob implements ShouldQueue
 {
-    use Queueable;
+    use Queueable, Batchable;
 
     public int $tries = 3;
 

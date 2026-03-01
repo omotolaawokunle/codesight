@@ -211,8 +211,7 @@ class Indexer
      */
     private function storeChunkMetadata(string $repositoryId, array $chunks): void
     {
-        $records = array_map(fn (array $chunk) => [
-            'id'            => Str::uuid()->toString(),
+        $records = array_map(fn(array $chunk) => [
             'repository_id' => $repositoryId,
             'vector_id'     => null,
             'file_path'     => $chunk['filePath'],

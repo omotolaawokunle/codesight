@@ -51,7 +51,10 @@ return Application::configure(basePath: dirname(__DIR__))
         });
 
         $exceptions->render(function (AuthenticationException $e, $request): JsonResponse|null {
-            if (! $request->expectsJson()) {
+            $wantsApiResponse = $request->expectsJson()
+                || str_contains($request->header('Accept', ''), 'text/event-stream');
+
+            if (! $wantsApiResponse) {
                 return null;
             }
 

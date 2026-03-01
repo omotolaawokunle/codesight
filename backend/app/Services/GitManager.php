@@ -125,7 +125,7 @@ class GitManager
 
         // Ensure the path starts with /tmp/ as a safety guard against
         // accidentally deleting unintended directories.
-        if (!str_starts_with(realpath($repositoryPath) ?: '', '/tmp/')) {
+        if (!str_starts_with(realpath($repositoryPath) ?: '', realpath('/tmp/'))) {
             Log::warning('GitManager: cleanup skipped — path is outside /tmp/', [
                 'path' => $repositoryPath,
             ]);

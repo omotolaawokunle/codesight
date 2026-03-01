@@ -1,13 +1,20 @@
+import { useAuthStore } from '@/stores/auth'
 import { ref } from 'vue'
 
 export interface StreamChunk {
-  type: 'chunk' | 'done' | 'error' | 'sources'
-  content?: string
-  sources?: Array<{ file: string; lines: string; relevance: number }>
+  type: 'text_delta' | 'stream_end' | 'stream_start' | 'text_start' | 'text_end' | 'error' | string
+  delta?: string
+  reason?: string
   error?: string
 }
 
+function getCsrfToken(): string | null {
+  const match = document.cookie.match(/XSRF-TOKEN=([^;]+)/)
+  return match?.[1] ? decodeURIComponent(match[1]) : null
+}
+
 export function useStreaming() {
+  const authStore = useAuthStore()
   const isStreaming = ref(false)
   const streamedContent = ref('')
 
@@ -15,21 +22,26 @@ export function useStreaming() {
     url: string,
     body: Record<string, unknown>,
     onChunk: (chunk: string) => void,
-    onDone?: (sources: StreamChunk['sources']) => void,
+    onDone?: () => void,
   ): Promise<void> {
     isStreaming.value = true
     streamedContent.value = ''
 
     try {
-      const token = localStorage.getItem('auth_token')
+      const token = authStore.token
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        Accept: 'text/event-stream',
+      }
+      if (token) headers['Authorization'] = `Bearer ${token}`
+      const csrf = getCsrfToken()
+      if (csrf) headers['X-XSRF-TOKEN'] = csrf
+
       const response = await fetch(url, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Accept: 'text/event-stream',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
+        headers,
         body: JSON.stringify(body),
+        credentials: 'include',
       })
 
       if (!response.ok) {
@@ -63,19 +75,17 @@ export function useStreaming() {
           try {
             const parsed: StreamChunk = JSON.parse(jsonStr)
 
-            if (parsed.type === 'chunk' && parsed.content) {
-              streamedContent.value += parsed.content
-              onChunk(parsed.content)
-            } else if (parsed.type === 'done') {
-              onDone?.(parsed.sources)
+            if (parsed.type === 'text_delta' && parsed.delta) {
+              streamedContent.value += parsed.delta
+              onChunk(parsed.delta)
+            } else if (parsed.type === 'stream_end') {
+              onDone?.()
             } else if (parsed.type === 'error') {
               throw new Error(parsed.error ?? 'Stream error')
             }
           } catch (parseError) {
-            // Non-JSON data line — treat raw content as a chunk for compatibility
-            if (jsonStr && jsonStr !== '[DONE]') {
-              streamedContent.value += jsonStr
-              onChunk(jsonStr)
+            if (parseError instanceof Error && parseError.message.includes('Stream error')) {
+              throw parseError
             }
           }
         }

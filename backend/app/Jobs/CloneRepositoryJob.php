@@ -112,17 +112,19 @@ class CloneRepositoryJob implements ShouldQueue
                 return;
             }
 
+            $repositoryId = $this->repository->id;
+
             Bus::batch([...$indexJobs])
-                ->then(function (Batch $batch) {
-                    FinalizeIndexingJob::dispatch($this->repository);
+                ->then(function (Batch $batch) use ($repositoryId) {
+                    FinalizeIndexingJob::dispatch($repositoryId);
                 })
-                ->catch(function (Batch $batch, Throwable $e) {
+                ->catch(function (Batch $batch, Throwable $e) use ($repositoryId) {
                     Log::error('CloneRepositoryJob: batch failed', [
-                        'repository_id' => $this->repository->id,
+                        'repository_id' => $repositoryId,
                         'error'         => $e->getMessage(),
                     ]);
 
-                    $this->repository->update([
+                    Repository::find($repositoryId)?->update([
                         'indexing_status' => 'failed',
                         'indexing_error'  => $e->getMessage(),
                     ]);

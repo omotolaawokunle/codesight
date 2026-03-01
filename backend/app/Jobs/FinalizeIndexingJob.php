@@ -15,29 +15,38 @@ class FinalizeIndexingJob implements ShouldQueue
     public int $tries = 3;
 
     public function __construct(
-        public readonly Repository $repository,
+        public readonly string $repositoryId,
     ) {}
 
     public function handle(): void
     {
-        $this->repository->update([
+        $repository = Repository::find($this->repositoryId);
+
+        if (!$repository) {
+            Log::warning('FinalizeIndexingJob: repository not found', [
+                'repository_id' => $this->repositoryId,
+            ]);
+            return;
+        }
+
+        $repository->update([
             'indexing_status'       => 'completed',
             'indexing_completed_at' => now(),
         ]);
 
         Log::info('FinalizeIndexingJob: repository indexing completed', [
-            'repository_id' => $this->repository->id,
+            'repository_id' => $this->repositoryId,
         ]);
     }
 
     public function failed(Throwable $exception): void
     {
         Log::error('FinalizeIndexingJob: failed to finalize', [
-            'repository_id' => $this->repository->id,
+            'repository_id' => $this->repositoryId,
             'error'         => $exception->getMessage(),
         ]);
 
-        $this->repository->update([
+        Repository::find($this->repositoryId)?->update([
             'indexing_status' => 'failed',
             'indexing_error'  => $exception->getMessage(),
         ]);
