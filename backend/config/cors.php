@@ -24,7 +24,7 @@ return [
 
     'allowed_origins_patterns' => [],
 
-    'allowed_headers' => ['Authorization', 'Content-Type', 'Accept', 'X-Requested-With', 'Origin'],
+    'allowed_headers' => ['Authorization', 'Content-Type', 'Accept', 'X-Requested-With', 'Origin', 'X-XSRF-TOKEN'],
 
     'exposed_headers' => ['X-Token', 'X-RateLimit-Limit', 'X-RateLimit-Remaining', 'X-RateLimit-Reset'],
 

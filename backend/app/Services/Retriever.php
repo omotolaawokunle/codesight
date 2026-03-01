@@ -10,7 +10,7 @@ class Retriever
 {
     private const DEFAULT_TOP_K = 10;
     private const MAX_TOP_K = 50;
-    private const DEFAULT_THRESHOLD = 0.7;
+    private const DEFAULT_THRESHOLD = 0.4;
     private const CACHE_TTL_SECONDS = 300; // 5 minutes
 
     /** Score multiplier when the chunk name contains a query keyword. */
@@ -65,7 +65,7 @@ class Retriever
             $collectionName = "repo_{$repositoryId}";
             $results        = $this->vectorDb->search($collectionName, $vector, $topK, $threshold);
 
-            return $this->formatResults($results);
+            return $this->formatResults($results, $repositoryId);
         });
     }
 
@@ -182,7 +182,7 @@ class Retriever
         $collectionName = "repo_{$repositoryId}";
         $points         = $this->vectorDb->scrollByFilter($collectionName, 'file_path', $filePath);
 
-        return array_map(fn (array $point) => $this->normalisePoint($point, 1.0), $points);
+        return array_map(fn(array $point) => $this->normalisePoint($point, 1.0, $repositoryId), $points);
     }
 
     /**
@@ -226,6 +226,7 @@ class Retriever
                         && ($fc['end_line'] ?? 0) >= $ref['line']
                     ) {
                         $fc['score']   = 1.0; // Treat exact line matches as high relevance.
+                        $fc['file_path'] = str_replace('/tmp/repos/' . $repositoryId . '/', '/', $fc['file_path']);
                         $traceChunks[] = $fc;
                     }
                 }
@@ -456,16 +457,17 @@ class Retriever
      * Normalise a raw Qdrant search result into a flat chunk array.
      *
      * @param  array<string, mixed>  $result  Raw Qdrant result (with 'score' and 'payload').
+     * @param  int  $repositoryId
      * @return array<string, mixed>
      */
-    private function normalisePoint(array $result, float $defaultScore = 0.0): array
+    private function normalisePoint(array $result, float $defaultScore = 0.0, int $repositoryId): array
     {
         $payload = $result['payload'] ?? [];
 
         return [
             'vector_id'  => $result['id'] ?? null,
             'score'      => (float) ($result['score'] ?? $defaultScore),
-            'file_path'  => $payload['file_path'] ?? null,
+            'file_path'  => str_replace('/tmp/repos/' . $repositoryId . '/', '/', $payload['file_path'] ?? null),
             'chunk_type' => $payload['chunk_type'] ?? null,
             'name'       => $payload['name'] ?? null,
             'content'    => $payload['content'] ?? null,
@@ -481,11 +483,12 @@ class Retriever
      * Normalise and sort a list of raw Qdrant search results.
      *
      * @param  array<int, array<string, mixed>>  $results
+     * @param  int  $repositoryId
      * @return array<int, array<string, mixed>>
      */
-    private function formatResults(array $results): array
+    private function formatResults(array $results, int $repositoryId): array
     {
-        $normalised = array_map(fn (array $r) => $this->normalisePoint($r), $results);
+        $normalised = array_map(fn(array $r) => $this->normalisePoint(result: $r, repositoryId: $repositoryId), $results);
 
         usort($normalised, fn ($a, $b) => $b['score'] <=> $a['score']);
 

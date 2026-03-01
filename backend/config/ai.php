@@ -33,7 +33,7 @@ return [
     */
 
     'chat_provider' => env('AI_CHAT_PROVIDER', 'gemini'),
-    'chat_model'    => env('AI_CHAT_MODEL', 'gemini-3.0-flash'),
+    'chat_model'    => env('AI_CHAT_MODEL', 'gemini-3-flash-preview'),
     'default_for_reranking' => 'cohere',
 
     /*

@@ -230,7 +230,7 @@ class LLMService
      */
     private function resolveModel(): string
     {
-        return (string) config('ai.chat_model', 'gemini-3.0-flash');
+        return (string) config('ai.chat_model', 'gemini-3-flash-preview');
     }
 
     /**

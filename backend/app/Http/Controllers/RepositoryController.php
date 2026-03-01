@@ -118,7 +118,8 @@ class RepositoryController extends Controller
         $filePaths = $repository->codeChunks()
             ->distinct()
             ->orderBy('file_path')
-            ->pluck('file_path');
+            ->pluck('file_path')
+            ->map(fn(string $filePath) => str_replace("/tmp/repos/{$repository->id}", "/{$repository->name}", $filePath));
 
         return response()->json(['file_paths' => $filePaths]);
     }

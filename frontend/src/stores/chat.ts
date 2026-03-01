@@ -36,7 +36,7 @@ export const useChatStore = defineStore('chat', () => {
     try {
       const { data } = await api.post('/chat', {
         repository_id: repositoryId,
-        message,
+        query: message,
         conversation_id: conversationId,
       })
 
@@ -98,22 +98,15 @@ export const useChatStore = defineStore('chat', () => {
     try {
       await stream(
         `${baseUrl}/chat/stream`,
-        { repository_id: repositoryId, message: userText, conversation_id: conversationId },
+        { repository_id: repositoryId, query: userText, conversation_id: conversationId },
         (chunk) => {
           tempAssistantMsg.content += chunk
           // Vue reactivity — replace the array item to trigger updates
           const idx = messages.value.findIndex((m) => m.id === tempAssistantMsg.id)
           if (idx !== -1) messages.value[idx] = { ...tempAssistantMsg }
         },
-        (sources) => {
-          finalSources = sources ?? []
-          const idx = messages.value.findIndex((m) => m.id === tempAssistantMsg.id)
-          if (idx !== -1) {
-            messages.value[idx] = {
-              ...tempAssistantMsg,
-              metadata: { sources: finalSources },
-            }
-          }
+        () => {
+          // stream_end received — content is fully assembled in tempAssistantMsg
         },
       )
 

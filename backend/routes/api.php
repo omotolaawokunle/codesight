@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ChatController;
+use App\Http\Controllers\ConversationController;
 use App\Http\Controllers\HealthController;
 use App\Http\Controllers\RepositoryController;
 use Illuminate\Http\Request;
@@ -33,4 +34,5 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     Route::post('/chat/analyze-error', [ChatController::class, 'analyzeError'])->middleware('throttle:chat');
     Route::get('/chat/{repositoryId}/conversations', [ChatController::class, 'conversations']);
     Route::delete('/chat/conversations/{id}', [ChatController::class, 'deleteConversation']);
+    Route::get('/chat/conversations/{conversation}/messages', [ConversationController::class, 'messages']);
 });
